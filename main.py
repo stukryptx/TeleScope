@@ -4,6 +4,7 @@ import json
 import sys
 import hashlib
 import os
+import argparse
 from time import time
 from dataclasses import asdict
 from tqdm.asyncio import tqdm
@@ -32,14 +33,18 @@ def get_file_hash(filepath: str) -> str:
     return hasher.hexdigest()
 
 async def main():
+    parser = argparse.ArgumentParser(description="Telegram IOC Resolver - Asynchronous MTProto OSINT tool")
+    parser.add_argument("--file", "-f", type=str, default="Cleaned_IOC.txt", help="Path to the IOC text file (default: Cleaned_IOC.txt)")
+    args = parser.parse_args()
+
     setup_logging()
     logging.info("Starting Telegram IOC Resolver")
     start_time = time()
     
-    file_path = "Cleaned_IOC.txt"
+    file_path = args.file
     iocs = await parse_iocs(file_path)
     if not iocs:
-        logging.error("No valid IOCs found in Cleaned_IOC.txt or file is missing.")
+        logging.error(f"No valid IOCs found in {file_path} or file is missing.")
         return
         
     logging.info(f"Loaded {len(iocs)} unique IOCs")
