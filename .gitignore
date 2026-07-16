@@ -1,0 +1,27 @@
+# Environment variables (contains API_ID and API_HASH)
+.env
+
+# Telethon session files (contains authentication tokens)
+*.session
+*.session-journal
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Logs
+logs/
+*.log
+
+# State files
+.resolver_state.jsonl
+
+# Generated Data / Inputs
+Telegram_IOCs.md
+Cleaned_IOC.txt
+
+# Virtual Environments
+venv/
+env/
+.venv/
