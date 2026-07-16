@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 import aiofiles
 from typing import List
-from models import IOCResult, EntityType
+from .models import IOCResult, EntityType
 
 async def init_report(output_file: str = "Telegram_IOCs.md", overwrite: bool = False):
     mode = 'w' if overwrite or not os.path.exists(output_file) else 'a'

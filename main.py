@@ -15,12 +15,12 @@ import telethon.network.mtprotostate
 telethon.network.mtprotostate.MSG_TOO_NEW_DELTA = 99999999
 telethon.network.mtprotostate.MSG_TOO_OLD_DELTA = 99999999
 
-from config import API_ID, API_HASH, SESSION_NAME
-from utils import setup_logging
-from parser import parse_iocs
-from resolver import resolve_ioc
-from writer import init_report, append_ioc_to_report, finalize_report
-from models import IOCResult
+from telescope.config import API_ID, API_HASH, SESSION_NAME
+from telescope.utils import setup_logging
+from telescope.parser import parse_iocs
+from telescope.resolver import resolve_ioc
+from telescope.writer import init_report, append_ioc_to_report, finalize_report
+from telescope.models import IOCResult
 
 def get_file_hash(filepath: str) -> str:
     hasher = hashlib.md5()
