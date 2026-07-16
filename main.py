@@ -73,11 +73,12 @@ async def main():
         pass
 
     # Initialize Telethon Client
-    client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
-    
-    logging.info("Connecting to Telegram...")
-    await client.start()
-    logging.info("Logged in successfully!")
+    client = None
+    if args.join:
+        client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
+        logging.info("Connecting to Telegram...")
+        await client.start()
+        logging.info("Logged in successfully!")
     
     success_count = sum(1 for r in results if r.status == "Success")
     fail_count = processed_count - success_count

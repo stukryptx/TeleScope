@@ -17,8 +17,13 @@ from .models import IOCResult, EntityType
 from .utils import random_delay
 from .parser import classify_and_extract
 from .config import MAX_RETRIES
+from .web_resolver import web_resolve
 
 async def resolve_ioc(client: TelegramClient, url: str, join: bool = False) -> IOCResult:
+    # Strict Web-Scraping path to bypass MTProto Rate Limits
+    if not join:
+        return await web_resolve(url)
+            
     result = IOCResult(original_ioc=url, normalized_url=url)
     
     is_invite, identifier = classify_and_extract(url)
