@@ -1,6 +1,10 @@
 <h1 align="center">Telegram IOC Resolver</h1>
 
 <p align="center">
+  <img src="banner.png" alt="Telegram IOC Resolver Banner" width="100%">
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Python-3.12+-blue.svg" alt="Python">
   <img src="https://img.shields.io/badge/Telethon-Async-orange.svg" alt="Telethon">
   <img src="https://img.shields.io/badge/OSINT-Threat%20Intelligence-red.svg" alt="OSINT">
@@ -58,6 +62,13 @@ You can specify any text file containing newline-separated Telegram URLs using t
 ```bash
 python main.py --file path/to/your/iocs.txt
 ```
+
+### Advanced Flags
+You can automate interactions with target accounts using the `--join` flag:
+```bash
+python main.py --file path/to/your/iocs.txt --join
+```
+- **`--join`**: Automatically sends `/start` to Bots, and executes Join requests on Channels, Supergroups, and Private Invites. *(Warning: Use cautiously on bulk lists to avoid Telegram FloodWait restrictions).*
 
 ### Authentication
 On the first run, the script will interactively prompt you for your Telegram phone number and 2FA code. This generates a persistent `.session` file locally.

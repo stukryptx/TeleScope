@@ -35,6 +35,7 @@ def get_file_hash(filepath: str) -> str:
 async def main():
     parser = argparse.ArgumentParser(description="Telegram IOC Resolver - Asynchronous MTProto OSINT tool")
     parser.add_argument("--file", "-f", type=str, default="Cleaned_IOC.txt", help="Path to the IOC text file (default: Cleaned_IOC.txt)")
+    parser.add_argument("--join", action="store_true", help="Automatically join groups/channels and start bots")
     args = parser.parse_args()
 
     setup_logging()
@@ -120,7 +121,7 @@ async def main():
                 
             pbar.set_description(f"Resolving: {ioc[:30]}...")
             
-            result = await resolve_ioc(client, ioc)
+            result = await resolve_ioc(client, ioc, join=args.join)
             results.append(result)
             sf.write(json.dumps(asdict(result)) + "\n")
             sf.flush()
@@ -128,10 +129,15 @@ async def main():
             if result.status == "Success":
                 success_count += 1
                 await append_ioc_to_report(result)
-                logging.info(f"Resolved [Success]: {ioc} -> {result.display_name}")
+                
+                # Format: [+] Telegram [Channel,Group,User,BOT] [Resolved, Unavaliable] [Name of That] [Joined , Requested]
+                action_str = f" [{result.action_status}]" if result.action_status else ""
+                log_msg = f"[+] Telegram [{result.entity_type}] [Resolved] [{result.display_name or ioc}]{action_str}"
+                tqdm.write(log_msg)
             else:
                 fail_count += 1
-                logging.error(f"Resolved [Failed]: {ioc} -> {result.error_message}")
+                log_msg = f"[-] Telegram [{result.entity_type}] [Unavailable] [{ioc}] [{result.error_message}]"
+                tqdm.write(log_msg)
                 
             pbar.set_postfix({"Success": success_count, "Failed": fail_count})
             pbar.update(1)

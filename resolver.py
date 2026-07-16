@@ -5,20 +5,20 @@ from telethon.tl.types import (
     User, Chat, Channel, ChatForbidden, ChannelForbidden,
     ChannelFull, UserFull
 )
-from telethon.tl.functions.messages import CheckChatInviteRequest
-from telethon.tl.functions.channels import GetFullChannelRequest
+from telethon.tl.functions.channels import GetFullChannelRequest, JoinChannelRequest
+from telethon.tl.functions.messages import CheckChatInviteRequest, ImportChatInviteRequest
 from telethon.tl.functions.users import GetFullUserRequest
 from telethon.tl.types import ChatInviteAlready, ChatInvite, ChatInvitePeek
 from telethon.errors import (
     FloodWaitError, RPCError, InviteHashExpiredError, InviteHashInvalidError,
-    UsernameInvalidError, UsernameNotOccupiedError
+    UsernameInvalidError, UsernameNotOccupiedError, UserAlreadyParticipantError
 )
 from models import IOCResult, EntityType
 from utils import random_delay
 from parser import classify_and_extract
 from config import MAX_RETRIES
 
-async def resolve_ioc(client: TelegramClient, url: str) -> IOCResult:
+async def resolve_ioc(client: TelegramClient, url: str, join: bool = False) -> IOCResult:
     result = IOCResult(original_ioc=url, normalized_url=url)
     
     is_invite, identifier = classify_and_extract(url)
@@ -41,6 +41,8 @@ async def resolve_ioc(client: TelegramClient, url: str) -> IOCResult:
                 
                 if isinstance(invite_details, (ChatInviteAlready, ChatInvitePeek)):
                     entity = invite_details.chat
+                    if join and isinstance(invite_details, ChatInviteAlready):
+                        result.action_status = "Joined"
                 elif isinstance(invite_details, ChatInvite):
                     result.entity_type = EntityType.CHANNEL.value if getattr(invite_details, 'channel', False) else EntityType.BASIC_GROUP.value
                     if getattr(invite_details, 'megagroup', False):
@@ -52,6 +54,16 @@ async def resolve_ioc(client: TelegramClient, url: str) -> IOCResult:
                     result.verified = getattr(invite_details, 'verified', False)
                     result.scam = getattr(invite_details, 'scam', False)
                     result.fake = getattr(invite_details, 'fake', False)
+                    
+                    if join:
+                        try:
+                            await client(ImportChatInviteRequest(hash=identifier))
+                            result.action_status = "Joined"
+                        except UserAlreadyParticipantError:
+                            result.action_status = "Joined"
+                        except Exception as e:
+                            logging.debug(f"Action failed for {url}: {e}")
+                            
                     result.status = "Success"
                     return result
                 else:
@@ -115,6 +127,19 @@ async def resolve_ioc(client: TelegramClient, url: str) -> IOCResult:
                 result.status = "Failed"
                 result.error_message = f"Unsupported entity type: {type(entity)}"
                 return result
+
+            if join:
+                try:
+                    if result.entity_type == EntityType.BOT.value:
+                        await client.send_message(entity, '/start')
+                        result.action_status = "Requested"
+                    elif result.entity_type in (EntityType.CHANNEL.value, EntityType.SUPERGROUP.value):
+                        await client(JoinChannelRequest(entity))
+                        result.action_status = "Joined"
+                except UserAlreadyParticipantError:
+                    result.action_status = "Joined"
+                except Exception as e:
+                    logging.debug(f"Action failed for {url}: {e}")
 
             result.status = "Success"
             return result

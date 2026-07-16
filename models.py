@@ -27,3 +27,4 @@ class IOCResult:
     description: Optional[str] = None
     status: str = "Pending"
     error_message: Optional[str] = None
+    action_status: str = ""
