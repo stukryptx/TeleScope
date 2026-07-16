@@ -1,7 +1,7 @@
 <h1 align="center">Telegram IOC Resolver</h1>
 
 <p align="center">
-  <img src="banner.png" alt="Telegram IOC Resolver Banner" width="100%">
+  <img src="assets/banner.png" alt="Telegram IOC Resolver Banner" width="100%">
 </p>
 
 <p align="center">
@@ -12,6 +12,10 @@
 
 <p align="center">
   <strong>A production-ready, highly resilient asynchronous Python tool built on the MTProto API (Telethon) to resolve, classify, and extract metadata from massive lists of Telegram Indicators of Compromise (IOCs).</strong>
+</p>
+
+<p align="center">
+  <a href="https://github.com/stukryptx/TeleScope">https://github.com/stukryptx/TeleScope</a>
 </p>
 
 ---
@@ -33,8 +37,8 @@
 ### Installation
 1. **Clone the repository**:
    ```bash
-   git clone <repository_url>
-   cd TG-Resolver
+   git clone https://github.com/stukryptx/TeleScope.git
+   cd TeleScope
    ```
 
 2. **Install dependencies**:

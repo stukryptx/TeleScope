@@ -3,7 +3,7 @@ import logging
 import random
 from pathlib import Path
 from rich.logging import RichHandler
-from config import MIN_DELAY, MAX_DELAY
+from .config import MIN_DELAY, MAX_DELAY
 
 def setup_logging():
     log_dir = Path("logs")

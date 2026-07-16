@@ -13,10 +13,10 @@ from telethon.errors import (
     FloodWaitError, RPCError, InviteHashExpiredError, InviteHashInvalidError,
     UsernameInvalidError, UsernameNotOccupiedError, UserAlreadyParticipantError
 )
-from models import IOCResult, EntityType
-from utils import random_delay
-from parser import classify_and_extract
-from config import MAX_RETRIES
+from .models import IOCResult, EntityType
+from .utils import random_delay
+from .parser import classify_and_extract
+from .config import MAX_RETRIES
 
 async def resolve_ioc(client: TelegramClient, url: str, join: bool = False) -> IOCResult:
     result = IOCResult(original_ioc=url, normalized_url=url)
