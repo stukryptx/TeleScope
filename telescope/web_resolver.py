@@ -33,10 +33,20 @@ async def web_resolve(url: str) -> IOCResult:
 
                 # Check if it's an actual preview page by looking for the title
                 title_elem = soup.find('div', {'class': 'tgme_page_title'})
+                desc_elem = soup.find('div', {'class': 'tgme_page_description'})
+                
                 if not title_elem:
-                    # Could be invalid or completely private without preview
+                    # Check if it's a hidden user profile
+                    if desc_elem and "contact @" in desc_elem.text.lower():
+                        result.entity_type = "User (Unconfirmed)"
+                        result.status = "Success"
+                        result.description = "Private User Account (No Public Web Preview)"
+                        result.display_name = identifier
+                        return result
+                        
+                    # Otherwise, it's truly invalid or unavailable
                     result.status = "Failed"
-                    result.error_message = "No preview available"
+                    result.error_message = "No preview available (Invalid or Private)"
                     return result
                 
                 title_text = title_elem.text.strip()
@@ -66,9 +76,8 @@ async def web_resolve(url: str) -> IOCResult:
                     except ValueError:
                         pass
 
-                # Description
-                desc_elem = soup.find('div', {'class': 'tgme_page_description'})
-                if desc_elem:
+                # Description (if not already extracted)
+                if desc_elem and not result.description:
                     result.description = desc_elem.text.strip()
 
                 # Action/Warning label checks (Scam)
