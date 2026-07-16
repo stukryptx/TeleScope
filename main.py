@@ -36,6 +36,7 @@ async def main():
     parser = argparse.ArgumentParser(description="Telegram IOC Resolver - Asynchronous MTProto OSINT tool")
     parser.add_argument("--file", "-f", type=str, default="Cleaned_IOC.txt", help="Path to the IOC text file (default: Cleaned_IOC.txt)")
     parser.add_argument("--join", action="store_true", help="Automatically join groups/channels and start bots")
+    parser.add_argument("--parallel", "-p", type=int, default=1, help="Number of concurrent requests (default: 1)")
     args = parser.parse_args()
 
     setup_logging()
@@ -80,17 +81,23 @@ async def main():
         await client.start()
         logging.info("Logged in successfully!")
     
+    processed_urls = {r.original_ioc for r in results}
+    pending_iocs = [ioc for ioc in iocs if ioc not in processed_urls]
+    
     success_count = sum(1 for r in results if r.status == "Success")
-    fail_count = processed_count - success_count
+    fail_count = len(results) - success_count
     
-    pbar = tqdm(total=len(iocs), initial=processed_count, desc="Resolving IOCs")
-    
+    pbar = tqdm(total=len(iocs), initial=len(results), desc="Resolving IOCs")
     stop_requested = False
+    
+    queue = asyncio.Queue()
+    for ioc in pending_iocs:
+        queue.put_nowait(ioc)
 
     async def listen_for_pause():
         nonlocal stop_requested
         loop = asyncio.get_event_loop()
-        while not stop_requested and processed_count < len(iocs):
+        while not stop_requested and not queue.empty():
             # sys.stdin.readline is blocking, we run it in executor
             line = await loop.run_in_executor(None, sys.stdin.readline)
             if line.strip().lower() == 'p':
@@ -108,46 +115,55 @@ async def main():
         await append_ioc_to_report(r)
     
     # Open state file in append mode or write mode
-    mode = "a" if processed_count > 0 else "w"
+    mode = "a" if len(results) > 0 else "w"
+    file_lock = asyncio.Lock()
     
     with open(state_file, mode) as sf:
         if mode == "w":
             sf.write(json.dumps({"file_hash": current_hash}) + "\n")
             sf.flush()
             
-        for ioc in iocs[processed_count:]:
-            if stop_requested:
-                logging.info("Pausing the script as requested...")
-                break
+        async def worker():
+            nonlocal success_count, fail_count
+            while not queue.empty():
+                if stop_requested:
+                    break
+                ioc = await queue.get()
                 
-            pbar.set_description(f"Resolving: {ioc[:30]}...")
-            
-            result = await resolve_ioc(client, ioc, join=args.join)
-            results.append(result)
-            sf.write(json.dumps(asdict(result)) + "\n")
-            sf.flush()
-            
-            if result.status == "Success":
-                success_count += 1
-                await append_ioc_to_report(result)
+                pbar.set_description(f"Resolving: {ioc[:30]}...")
                 
-                # Format: [+] Telegram [Channel,Group,User,BOT] [Resolved, Unavaliable] [Name of That] [Joined , Requested]
-                action_str = f" [{result.action_status}]" if result.action_status else ""
-                log_msg = f"[+] Telegram [{result.entity_type}] [Resolved] [{result.display_name or ioc}]{action_str}"
-                tqdm.write(log_msg)
-            else:
-                fail_count += 1
-                log_msg = f"[-] Telegram [{result.entity_type}] [Unavailable] [{ioc}] [{result.error_message}]"
-                tqdm.write(log_msg)
+                result = await resolve_ioc(client, ioc, join=args.join)
                 
-            pbar.set_postfix({"Success": success_count, "Failed": fail_count})
-            pbar.update(1)
+                async with file_lock:
+                    results.append(result)
+                    sf.write(json.dumps(asdict(result)) + "\n")
+                    sf.flush()
+                    
+                    if result.status == "Success":
+                        success_count += 1
+                        await append_ioc_to_report(result)
+                        action_str = f" [{result.action_status}]" if result.action_status else ""
+                        log_msg = f"[+] Telegram [{result.entity_type}] [Resolved] [{result.display_name or ioc}]{action_str}"
+                        tqdm.write(log_msg)
+                    else:
+                        fail_count += 1
+                        log_msg = f"[-] Telegram [{result.entity_type}] [Unavailable] [{ioc}] [{result.error_message}]"
+                        tqdm.write(log_msg)
+                        
+                    pbar.set_postfix({"Success": success_count, "Failed": fail_count})
+                    pbar.update(1)
+                queue.task_done()
+                
+        workers = [asyncio.create_task(worker()) for _ in range(args.parallel)]
+        if workers:
+            await asyncio.gather(*workers)
             
     pbar.close()
     if not listen_task.done():
         listen_task.cancel()
         
-    await client.disconnect()
+    if client:
+        await client.disconnect()
     
     if stop_requested:
         logging.info("Script paused. You can restart it later to resume.")
